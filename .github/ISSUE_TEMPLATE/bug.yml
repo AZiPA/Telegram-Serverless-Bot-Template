@@ -1,0 +1,41 @@
+name: Bug report
+description: The template, a handler, or the docs are wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A cross-chat data leak or a committed token is not an issue.
+        Use a [private advisory](https://github.com/erfnzdeh/Telegram-Serverless-Bot-Template/security/advisories/new).
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where
+      options:
+        - handlers/ (message, callback_query, …)
+        - lib/ or schema.js
+        - tgcloud CLI / deploy / migrate
+        - Docs (README, AGENTS.md, docs/)
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      placeholder: /list showed another chat's rows. push applied a migration. A relative import compiled locally and died on deploy. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to see it
+      description: Handler, payload, or the CLI command. No bot tokens, no .tgcloud/.
+    validations:
+      required: true

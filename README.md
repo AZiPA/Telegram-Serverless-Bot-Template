@@ -130,3 +130,13 @@ npm shortcuts: `npm run deploy`, `npm run status`, `npm run migrate`.
 - A plain insert/update/delete resolves to `[]` — there's no insert id or affected-row count. Add `.returning()` when you need the rows back (as [lib/todos.js](lib/todos.js) does).
 - Raw SQL (`db.run`/`db.all`/`db.get`) skips column mode conversion: booleans arrive as `0`/`1`, timestamps as unix seconds, json as strings. Only the table-bound query builder converts.
 - Deployed surface is exactly: `schema.js`, `.js` files in `lib/` and `handlers/`. Markdown (including every README here), dotfiles, and `.tgcloud/` stay local.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bugs and ideas go in
+[issues](https://github.com/erfnzdeh/Telegram-Serverless-Bot-Template/issues).
+Security reports are private: see [SECURITY.md](SECURITY.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).

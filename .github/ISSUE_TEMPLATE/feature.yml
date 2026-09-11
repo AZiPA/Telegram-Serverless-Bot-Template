@@ -1,0 +1,23 @@
+name: Feature request
+description: Another handler type, a schema lesson, or a doc gap
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a teaching template. A feature that only makes a fatter todo
+        bot, without showing a platform rule, is likely to be declined.
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want
+      placeholder: An inline_query handler. A worked example of .deprecated(). …
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Which platform rule is invisible today without this.
+    validations:
+      required: true
