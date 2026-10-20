@@ -28,11 +28,11 @@ import { fetch } from 'sdk/fetch'
 The runtime is not stock Node — these defaults don't hold. Detail is in the
 sections below; project rules are in [../AGENTS.md](../AGENTS.md).
 
-- **Import by bare module name** — `from 'schema'`, `from 'lib/cart'`, `from 'sdk/db'`. Never a relative path or a `.js` extension.
+- **Import local modules via relative paths with `.js` extensions** — `from '../schema.js'`, `from '../lib/cart.js'`. Platform SDK modules use `'sdk'` and submodules like `'sdk/db'`.
 - **Every DB call is async — always `await`.** `.all()`/`.get()`/`.values()`/`.run()`, `db.$count()`, and raw `db.run/all/get` all return Promises. A forgotten `await` returns the builder, not rows.
 - **No foreign keys.** `.references()` and table-level `foreignKey()` **throw when declared** — a schema using them won't deploy. Enforce integrity in app code.
 - **Drops happen only via `.deprecated('reason')`** on a column/table/index. Deleting the declaration does *not* drop it; type changes are manual (`db.run(...)`).
-- **A handler's `export default (input, ctx)`** gets the update's *payload* as `input` — `handlers/message` receives the `Message` (i.e. `update.message`), `handlers/callback_query` the `CallbackQuery`. The full `Update` (with `update_id`) is `ctx.update`.
+- **A handler's `export default (input, ctx)`** gets the update's *payload* as `input` — `tgcloud/handlers/message.js` receives the `Message` (i.e. `update.message`), `tgcloud/handlers/callback_query.js` the `CallbackQuery`. The full `Update` (with `update_id`) is `ctx.update`.
 
 # Database (`db`)
 
@@ -46,14 +46,14 @@ import { table, integer, text, eq, sql } from 'sdk/db'   // named imports
 import db, { sql } from 'sdk/db'                          // or namespace + names
 ```
 
-Import your own modules by **bare name** — `from 'schema'`, `from 'lib/cart'` —
-never a relative path or `.js` extension.
+Import your own modules using relative paths with `.js` extensions — `from '../schema.js'`,
+`from '../lib/cart.js'`.
 
-## Defining the schema (`schema.js`)
+## Defining the schema (`tgcloud/schema.js`)
 
 Tables are **named exports**. `table()` builds a descriptor at runtime (no DB call);
 the platform discovers the exported tables and runs migrations when you deploy
-`schema.js`.
+`tgcloud/schema.js`.
 
 ```js
 import { table, integer, text, boolean, json, index, check, sql } from 'sdk/db'
@@ -263,7 +263,7 @@ import {
 ## Migrations (summary)
 
 - **Adding** columns/tables/indexes — applied automatically on `npx tgcloud migrate`
-  after you deploy `schema.js`.
+  after you deploy `tgcloud/schema.js`.
 - **Dropping** — only via `.deprecated()`; the CLI shows what will be removed.
 - **Changing a column's type** — not automatic; do it manually with `db.run`.
 

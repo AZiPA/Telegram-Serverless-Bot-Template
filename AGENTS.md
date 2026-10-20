@@ -7,10 +7,10 @@ and true. For the full SDK reference (db, Bot API, fetch), see
 
 ## What this project is
 
-A **Telegram Mini App bot** running on Telegram's serverless platform. You write
-JavaScript modules (database schema, shared library code, update handlers); the
-platform runs them in a V8 isolate. The `tgcloud` CLI syncs this local project
-with the bot's cloud environment — think `wrangler`/`vercel` + `drizzle-kit`.
+A **Telegram Mini App bot** running on Telegram's serverless platform (CLI v0.2.0+).
+You write JavaScript modules (database schema, shared library code, update handlers,
+and endpoints); the platform runs them in a V8 isolate. The `tgcloud` CLI syncs this
+local project with the bot's cloud environment — think `wrangler`/`vercel` + `drizzle-kit`.
 
 There is no server to run locally and no `node_modules` to import from at runtime:
 the only things available inside a module are the platform SDK and other modules
@@ -18,32 +18,31 @@ in this project.
 
 ## Layout
 
-| Path            | What it is                                                        |
-|-----------------|-------------------------------------------------------------------|
-| `schema.js`     | Database schema — tables as **named exports**. One file, at root. |
-| `lib/`          | Shared modules. Subdirectories allowed (`lib/internal/util.js`).  |
-| `handlers/`     | Update handlers, **one level only**. Names match Telegram Bot API update types (`message`, `callback_query`, …). |
-| `docs/`         | Reference docs (this project's, for you). Not deployed.           |
-| `.tgcloud/`     | CLI state (credentials, snapshot, cached layout). **Never edit or read from here** — it's gitignored machine state. |
+| Path                  | What it is                                                                    |
+|-----------------------|-------------------------------------------------------------------------------|
+| `tgcloud/schema.js`   | Database schema — tables as **named exports**.                                |
+| `tgcloud/handlers/`   | Update handlers, **one level only**. Names match Telegram Bot API update types (`message.js`, `callback_query.js`, …). |
+| `tgcloud/lib/`        | Shared modules. Subdirectories allowed (`tgcloud/lib/internal/util.js`).       |
+| `tgcloud/endpoints/`  | HTTP endpoints for Telegram Mini Apps and webhooks.                           |
+| `tgcloud.jsonc`       | Project configuration (schema and version: 0.2.0).                           |
+| `docs/`               | Reference docs (this project's, for you). Not deployed.                       |
+| `.tgcloud/`           | CLI state (credentials, snapshot, cached layout). **Never edit or read from here** — it's gitignored machine state. |
 
-Only `.js` files in `schema.js`, `lib/`, and `handlers/` are deployed. Everything
-else (Markdown, config, `.tgcloud/`) is local-only.
+Only `.js` files inside `tgcloud/` are deployed. Everything else (Markdown, config, `.tgcloud/`) is local-only.
 
 ## Module system — the rules that bite
 
-- **Import by bare module name, never a relative path or file extension.**
-  The platform resolves modules by their name in the module space, not by the
-  filesystem.
-  - ✅ `import { users } from 'schema'`
-  - ✅ `import { addItem } from 'lib/cart'`
-  - ✅ `import { db, api, fetch } from 'sdk'` / `import { eq, sql } from 'sdk/db'`
-  - ❌ `import { users } from './schema'` or `'../schema'` → **won't compile**
-  - ❌ `import x from 'lib/cart.js'` → drop the `.js`
+- **Import local modules via relative paths with explicit `.js` extensions.**
+  - ✅ `import { users } from '../schema.js';`
+  - ✅ `import { addTodo } from '../lib/todos.js';`
+  - ✅ `import { db, api, fetch } from 'sdk';` / `import { eq, sql } from 'sdk/db';`
+  - ❌ `import { users } from 'schema';` → bare module names are no longer used
+  - ❌ `import { addTodo } from '../lib/todos';` → missing `.js` extension
 - **No filesystem, no npm packages** at runtime. Only `sdk` (and its submodules
   like `sdk/db`) and your own project modules exist.
 - A handler module's `export default` is what the platform invokes, with the
-  update's **payload** as the first argument — for `handlers/message` that's the
-  `Message` (i.e. `update.message`), for `handlers/callback_query` the
+  update's **payload** as the first argument — for `tgcloud/handlers/message.js` that's the
+  `Message` (i.e. `update.message`), for `tgcloud/handlers/callback_query.js` the
   `CallbackQuery`, and so on. The full `Update` (with `update_id`) is on the
   second argument: `ctx.update`.
 
@@ -76,20 +75,21 @@ Full API in [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md). The non-obvious parts:
 The CLI is a local dev-dependency, so run it with `npx tgcloud <command>` (or use
 the `npm run` scripts in package.json — e.g. `npm run deploy`):
 
-```
-npx tgcloud status     # what changed locally vs the cloud
-npx tgcloud push       # deploy modules to the cloud
-npx tgcloud migrate    # apply schema.js changes to the database (interactive)
-npx tgcloud run <module> [args]   # execute a handler server-side
-npx tgcloud pull       # bring the local project in line with the cloud
-npx tgcloud login      # link this project to a bot
-npx tgcloud webhook    # show the bot's webhook and whether it matches your handlers
+```bash
+npx tgcloud status                 # what changed locally vs the cloud
+npx tgcloud diff                   # inspect code diffs
+npx tgcloud push                   # deploy modules to the cloud
+npx tgcloud migrate                # apply tgcloud/schema.js changes to the database (interactive)
+npx tgcloud run <module> [args]    # execute a handler server-side
+npx tgcloud pull                   # bring the local project in line with the cloud
+npx tgcloud login                  # link this project to a bot
+npx tgcloud webhook                # show the bot's webhook and whether it matches your handlers
 ```
 
-After you change `schema.js`, `push` reports what the DB *would* change but applies
+After you change `tgcloud/schema.js`, `push` reports what the DB *would* change but applies
 nothing — run `npx tgcloud migrate` to actually apply it.
 
 The platform manages the bot's webhook for you, derived from your deployed
-`handlers/*`, and refreshes it on `push`. If it ever drifts — e.g. someone called
+`tgcloud/handlers/*`, and refreshes it on `push`. If it ever drifts — e.g. someone called
 `setWebhook` with the raw bot token — `npx tgcloud webhook` shows the mismatch and
 `npx tgcloud webhook sync` repairs it.

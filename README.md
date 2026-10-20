@@ -1,18 +1,18 @@
 # Telegram Serverless Bot Template
 
-An educational template for [Telegram Serverless](https://core.telegram.org/bots/serverless) — Telegram's own platform that runs your bot's backend directly on their infrastructure. You write plain JavaScript modules; the platform runs them in a V8 sandbox next to the Bot API, with a built-in SQLite database. No servers, no containers, no webhook plumbing.
+An educational template for [Telegram Serverless](https://core.telegram.org/bots/serverless) — Telegram's own platform that runs your bot's backend directly on their infrastructure (CLI v0.2.0+ / October 2026 specs). You write plain JavaScript modules; the platform runs them in a V8 sandbox next to the Bot API, with a built-in SQLite database. No servers, no containers, no webhook plumbing.
 
 The template is a small but complete **todo bot**: send it text to add a task, `/list` to see your tasks as tappable buttons, tap to toggle or delete. Small on purpose — every file exists to demonstrate one part of the platform, and each folder has its own README explaining its role:
 
-- [handlers/README.md](handlers/README.md) — how updates enter your bot
-- [lib/README.md](lib/README.md) — shared modules and the import rules
+- [tgcloud/handlers/README.md](tgcloud/handlers/README.md) — how updates enter your bot
+- [tgcloud/lib/README.md](tgcloud/lib/README.md) — shared modules and the import rules
 - [docs/README.md](docs/README.md) — the full SDK reference lives here
 
 ## The main principles
 
 ### 1. Your bot is a set of event handlers, not a server
 
-There is no `main()`, no process, no event loop of yours. Telegram delivers each [update](https://core.telegram.org/bots/api#update) (a message, a button tap, a member change) to the file in `handlers/` named after the update's type — `handlers/message.js` for messages, `handlers/callback_query.js` for button taps. Each file default-exports one async function; when it resolves, the invocation is over.
+There is no `main()`, no process, no event loop of yours. Telegram delivers each [update](https://core.telegram.org/bots/api#update) (a message, a button tap, a member change) to the file in `tgcloud/handlers/` named after the update's type — `tgcloud/handlers/message.js` for messages, `tgcloud/handlers/callback_query.js` for button taps. Each file default-exports one async function; when it resolves, the invocation is over.
 
 The webhook is managed *for* you and derived *from* your code: the platform builds `allowed_updates` from which handler files exist. Handling a new update type is creating a file, not configuring anything.
 
@@ -20,8 +20,8 @@ The webhook is managed *for* you and derived *from* your code: the platform buil
 flowchart LR
     U([User]) -->|message, button tap, …| TG[Telegram]
     TG -->|Update| R{{"platform routes by update type"}}
-    R -->|update.message| M["handlers/message.js"]
-    R -->|update.callback_query| C["handlers/callback_query.js"]
+    R -->|update.message| M["tgcloud/handlers/message.js"]
+    R -->|update.callback_query| C["tgcloud/handlers/callback_query.js"]
     M --> DB[("built-in SQLite")]
     C --> DB
     M -.->|"api.sendMessage(…)"| TG
@@ -30,26 +30,26 @@ flowchart LR
 
 ### 2. Everything is a module, and the sandbox is not Node
 
-Your code runs in a V8 isolate with exactly three kinds of imports, all by **bare name** — never relative paths, never `.js` extensions:
+Your code runs in a V8 isolate with local relative imports explicitly including `.js` extensions, and platform modules imported from `'sdk'` or `'sdk/db'`:
 
 ```js
-import { db, api, fetch } from 'sdk';   // the platform: database, Bot API, HTTP
-import { todos } from 'schema';         // your schema (root file)
-import { addTodo } from 'lib/todos';    // your shared modules
+import { db, api, fetch } from 'sdk';       // the platform: database, Bot API, HTTP
+import { todos } from '../schema.js';        // your schema
+import { addTodo } from '../lib/todos.js';   // your shared modules
 ```
 
 There are no npm packages at runtime, no filesystem, and no network except `fetch` from the SDK. This sounds restrictive; it's what makes deploys instant, cold starts negligible, and every module trivially auditable. (The `@tgcloud/cli` in package.json is a local dev tool — it never ships.)
 
 ### 3. State lives in the built-in database
 
-Handlers are stateless between invocations — a global variable won't survive. Persistent state goes in the SQLite database that ships with every bot, declared in [schema.js](schema.js) as tables and queried with a Drizzle-style builder:
+Handlers are stateless between invocations — a global variable won't survive. Persistent state goes in the SQLite database that ships with every bot, declared in [tgcloud/schema.js](tgcloud/schema.js) as tables and queried with a Drizzle-style builder:
 
 ```js
 await db.insert(todos).values({ chatId, text }).returning().run();
 await db.select().from(todos).where(eq(todos.chatId, chatId)).all();
 ```
 
-Two rules that bite: **every DB call must be awaited** (a forgotten `await` returns the query builder, not rows), and **there are no foreign keys** — `.references()` throws at deploy time, so integrity is your application code's job (see how [lib/todos.js](lib/todos.js) scopes every query by `chatId`).
+Two rules that bite: **every DB call must be awaited** (a forgotten `await` returns the query builder, not rows), and **there are no foreign keys** — `.references()` throws at deploy time, so integrity is your application code's job (see how [tgcloud/lib/todos.js](tgcloud/lib/todos.js) scopes every query by `chatId`).
 
 ### 4. Code and schema change on different rhythms
 
@@ -57,14 +57,14 @@ Two rules that bite: **every DB call must be awaited** (a forgotten `await` retu
 
 ```bash
 npx tgcloud push       # deploy code; reports pending DB changes, applies none
-npx tgcloud migrate    # apply schema.js changes to the database
+npx tgcloud migrate    # apply tgcloud/schema.js changes to the database
 ```
 
 ```mermaid
 flowchart LR
     subgraph local["your folder (working copy)"]
-        H["handlers/ + lib/"]
-        S["schema.js"]
+        H["tgcloud/handlers/ + tgcloud/lib/"]
+        S["tgcloud/schema.js"]
     end
     subgraph cloud["your bot's cloud environment"]
         D["deployed modules"]
@@ -76,7 +76,7 @@ flowchart LR
     P -->|"migrate (explicit)"| DB
 ```
 
-Destructive changes are deliberately hard: dropping a column or table happens only by marking it `.deprecated('reason')` in schema.js — deleting the declaration drops nothing. This asymmetry (code moves fast, data moves carefully) is the same discipline production teams enforce by convention; here the platform enforces it.
+Destructive changes are deliberately hard: dropping a column or table happens only by marking it `.deprecated('reason')` in `tgcloud/schema.js` — deleting the declaration drops nothing. This asymmetry (code moves fast, data moves carefully) is the same discipline production teams enforce by convention; here the platform enforces it.
 
 ### 5. The cloud is a shared truth you sync with
 
@@ -98,28 +98,28 @@ The deployed bot is the source of truth; your folder is a working copy. `push` i
 
 ## A guided tour (suggested reading order)
 
-1. [schema.js](schema.js) — two tables, an index, timestamp defaults, and why there's no foreign key.
-2. [handlers/message.js](handlers/message.js) — command routing, including the `/cmd@botname` form used in groups.
-3. [lib/todos.js](lib/todos.js) — the queries, and `renderList()`: one function that both handlers use to draw the list, embedding `toggle:<id>` / `delete:<id>` into the buttons' `callback_data`.
-4. [handlers/callback_query.js](handlers/callback_query.js) — the other side of that contract: answer the callback, mutate, re-render the message in place, and swallow exactly one expected Bot API error.
-5. [lib/users.js](lib/users.js) — an idempotent upsert (`onConflictDoUpdate`).
+1. [tgcloud/schema.js](tgcloud/schema.js) — two tables, an index, timestamp defaults, and why there's no foreign key.
+2. [tgcloud/handlers/message.js](tgcloud/handlers/message.js) — command routing, including the `/cmd@botname` form used in groups.
+3. [tgcloud/lib/todos.js](tgcloud/lib/todos.js) — the queries, and `renderList()`: one function that both handlers use to draw the list, embedding `toggle:<id>` / `delete:<id>` into the buttons' `callback_data`.
+4. [tgcloud/handlers/callback_query.js](tgcloud/handlers/callback_query.js) — the other side of that contract: answer the callback, mutate, re-render the message in place, and swallow exactly one expected Bot API error.
+5. [tgcloud/lib/users.js](tgcloud/lib/users.js) — an idempotent upsert (`onConflictDoUpdate`).
 
 Then skim [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md) for the full API surface, and [AGENTS.md](AGENTS.md) for the condensed rules (that file is auto-loaded by AI coding tools working in this repo).
 
 ## Everyday commands
 
 ```bash
-npx tgcloud status               # what changed locally vs the cloud
-npx tgcloud diff                 # line-by-line diff of changed modules
-npx tgcloud push                 # deploy (rejects if the cloud moved; --force overrides)
-npx tgcloud migrate              # apply schema changes (--dry-run to preview)
+npx tgcloud status                 # what changed locally vs the cloud
+npx tgcloud diff                   # line-by-line diff of changed modules
+npx tgcloud push                   # deploy (rejects if the cloud moved; --force overrides)
+npx tgcloud migrate                # apply schema changes (--dry-run to preview)
 npx tgcloud run handlers/message '{ chat: { id: 1 }, text: "hi" }'
-                                 # execute a handler server-side with a fake payload
-npx tgcloud add handlers/inline_query   # scaffold a new handler
-npx tgcloud webhook              # inspect webhook state; `webhook sync` repairs drift
+                                   # execute a handler server-side with a fake payload
+npx tgcloud add handlers/inline_query # scaffold a new handler
+npx tgcloud webhook                # inspect webhook state; `webhook sync` repairs drift
 ```
 
-npm shortcuts: `npm run deploy`, `npm run status`, `npm run migrate`.
+npm shortcuts: `npm run deploy`, `npm run migrate`, `npm run status`, `npm run diff`, `npm run dev`.
 
 ## Platform limits worth knowing up front
 
@@ -127,9 +127,9 @@ npm shortcuts: `npm run deploy`, `npm run status`, `npm run migrate`.
 - File bytes can't be downloaded or uploaded from a handler yet — pass `file_id`s around instead.
 - `fetch` responses are textual only, capped at 32 MB total.
 - `fetch` never throws on HTTP error statuses — a 404 resolves normally with `res.ok === false`; only real network failures (bad host, invalid URL) reject. Redirects are followed automatically (`res.url` is the final URL), and a body can be read **once** — a second `.json()`/`.text()` throws.
-- A plain insert/update/delete resolves to `[]` — there's no insert id or affected-row count. Add `.returning()` when you need the rows back (as [lib/todos.js](lib/todos.js) does).
+- A plain insert/update/delete resolves to `[]` — there's no insert id or affected-row count. Add `.returning()` when you need the rows back (as [tgcloud/lib/todos.js](tgcloud/lib/todos.js) does).
 - Raw SQL (`db.run`/`db.all`/`db.get`) skips column mode conversion: booleans arrive as `0`/`1`, timestamps as unix seconds, json as strings. Only the table-bound query builder converts.
-- Deployed surface is exactly: `schema.js`, `.js` files in `lib/` and `handlers/`. Markdown (including every README here), dotfiles, and `.tgcloud/` stay local.
+- Deployed surface is inside `tgcloud/`: `.js` files in `tgcloud/handlers/`, `tgcloud/lib/`, `tgcloud/endpoints/`, and `tgcloud/schema.js`. Markdown (including every README here), dotfiles, and `.tgcloud/` stay local.
 
 ## Contributing
 
