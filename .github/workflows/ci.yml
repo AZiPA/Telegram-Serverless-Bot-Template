@@ -22,8 +22,8 @@ jobs:
           node-version: 22
       - name: node --check
         run: |
-          node --check schema.js
-          node --check handlers/message.js
-          node --check handlers/callback_query.js
-          node --check lib/todos.js
-          node --check lib/users.js
+          node --check tgcloud/schema.js
+          node --check tgcloud/handlers/message.js
+          node --check tgcloud/handlers/callback_query.js
+          node --check tgcloud/lib/todos.js
+          node --check tgcloud/lib/users.js

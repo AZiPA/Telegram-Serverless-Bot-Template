@@ -12,8 +12,8 @@ body:
     attributes:
       label: Where
       options:
-        - handlers/ (message, callback_query, …)
-        - lib/ or schema.js
+        - tgcloud/handlers/ (message, callback_query, …)
+        - tgcloud/lib/ or tgcloud/schema.js
         - tgcloud CLI / deploy / migrate
         - Docs (README, AGENTS.md, docs/)
         - Something else
