@@ -59,7 +59,7 @@ There is nothing to return — a handler *does* things (calls `api.*`, writes to
   sequenceDiagram
       actor U as User
       participant TG as Telegram
-      participant H as handlers/callback_query.js
+      participant H as tgcloud/handlers/callback_query.js
       U->>TG: taps "⬜️ buy milk"
       TG->>H: CallbackQuery (data: "toggle:7")
       H->>H: toggleTodo(chatId, 7)

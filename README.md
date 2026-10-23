@@ -85,16 +85,36 @@ The deployed bot is the source of truth; your folder is a working copy. `push` i
 ## Quick start
 
 1. Create a bot with [@BotFather](https://t.me/BotFather) (or pick an existing one) and enable **Serverless** for it.
-2. Link and deploy:
-
-   ```bash
-   npm install
-   npx tgcloud login      # links this folder to your bot
-   npx tgcloud push       # deploy the modules
-   npx tgcloud migrate    # create the tables
-   ```
-
+2. Deploy the bot (see [Deployment & Setup](#deployment--setup) below for automated or manual options).
 3. Message your bot: any text adds a todo, `/list` shows the list, buttons toggle/delete.
+
+## Deployment & Setup
+
+### Option 1: Automated Deployment (GitHub Actions)
+1. In your GitHub repository, go to **Settings > Secrets and variables > Actions**.
+2. Create a new repository secret:
+   - **Name:** `TGCLOUD_TOKEN`
+   - **Value:** Your CLI Access token from @BotFather (under your bot -> **Serverless** -> **CLI Access** -> **Access token**).
+3. Any push to `main` will automatically deploy your code and run database migrations.
+
+### Option 2: Manual Deployment
+1. Install dependencies without generating a lockfile:
+   ```bash
+   npm install --no-package-lock
+   ```
+   *(Or initialize a new project folder using `@BotFather`'s scaffold command: `npm create @tgcloud/bot <bot_name>`)*
+
+2. Log in using your CLI Access token:
+   ```bash
+   npx tgcloud login
+   ```
+   Paste the access token when prompted.
+
+3. Deploy code and apply database migrations:
+   ```bash
+   npx tgcloud push
+   npx tgcloud migrate
+   ```
 
 ## A guided tour (suggested reading order)
 

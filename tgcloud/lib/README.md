@@ -41,7 +41,7 @@ the update and picks a branch; the queries, the keyboard layout, and any
 cross-handler contract live here. That keeps handlers readable top-to-bottom and
 makes logic testable via `npx tgcloud run` with different payloads.
 
-Note that `lib/todos.js` scopes every query by `chatId`, including toggle and
+Note that `tgcloud/lib/todos.js` scopes every query by `chatId`, including toggle and
 delete — the ids arriving in `callback_data` are user-supplied input, and the
 platform has no foreign keys or row-level security to catch a forged id. Guarding
 ownership in the query itself is the pattern to copy.

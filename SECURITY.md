@@ -36,6 +36,6 @@ Do not include a token or a dump of `.tgcloud/`.
 
 `.tgcloud/` is gitignored for a reason. If it has been committed or
 pasted, revoke the bot token with BotFather and run `npx tgcloud login`
-again. Queries in `lib/todos.js` are the pattern: every read and write
+again. Queries in `tgcloud/lib/todos.js` are the pattern: every read and write
 is `and(eq(todos.id, id), eq(todos.chatId, chatId))` or scoped by
 `chatId` alone.
